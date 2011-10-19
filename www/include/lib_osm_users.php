@@ -62,7 +62,7 @@
 		$cache = cache_get($cache_key);
 
 		if ($cache['ok']){
-			return $cache['data'];
+			# return $cache['data'];
 		}
 
 		$enc_osm_id = AddSlashes($osm_id);
@@ -83,7 +83,7 @@
 		$cache = cache_get($cache_key);
 
 		if ($cache['ok']){
-			return $cache['data'];
+			# return $cache['data'];
 		}
 
 		$enc_id = AddSlashes($user_id);
@@ -99,4 +99,20 @@
 
 	#################################################################
 
+	# this is syntactic sugar, yes.
+
+	function osm_users_get_oauth_keys(&$user){
+
+		$osm_user = osm_users_get_by_user_id($user['id']);
+
+		foreach ($osm_user as $k => $v){
+			if (! preg_match("/^oauth_/", $k)){
+				unset($osm_user[$k]);
+			}
+		}
+
+		return $osm_user;
+	}
+
+	#################################################################
 ?>

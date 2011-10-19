@@ -68,6 +68,7 @@
 		#
 
 		$url_parsed = parse_url($url);
+
 		if (isset($url_parsed['query'])){
 			parse_str($url_parsed['query'], $url_params);
 			$params = array_merge($params, $url_params);
@@ -137,9 +138,10 @@
 		}
 
 		$raw = implode("&", $sig);
-		#echo "base string: $raw\n";
+		# echo "base string: $raw\n";
 
 		$hashed = base64_encode(oauth_hmac_sha1($raw, $key, TRUE));
+
 		return $hashed;
 	}
 
@@ -151,7 +153,14 @@
 		if (array_key_exists('port', $parts) && $parts['port'] != '80'){
 			$port = ':' . $parts['port'];
 		}
-		return "{$parts['scheme']}://{$parts['host']}{$port}{$parts['path']}"; 
+
+		$url = "{$parts['scheme']}://{$parts['host']}{$port}{$parts['path']}";
+
+		if ($parts['fragment']){
+			$url .= "#{$parts['fragment']}";
+		}
+
+		return $url;
 	}
 
 	################################################################################################	
@@ -165,6 +174,7 @@
 			if ($k == "oauth_signature") continue;
 			$total[] = rawurlencode($k) . "=" . rawurlencode($v);
 		}
+
 		return implode("&", $total);
 	}
 
@@ -299,7 +309,7 @@
 					'url'		=> $url,
 					'method'	=> $method,
 				),
-				'body'		=> $response,
+				'body' => $response,
 			);
 
 			return $response;

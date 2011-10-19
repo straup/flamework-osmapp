@@ -9,7 +9,6 @@
 
 	#################################################################
 
-	$GLOBALS['cfg']['osm_api_endpoint'] = '';
 	$GLOBALS['cfg']['osm_oauth_endpoint'] = 'http://www.openstreetmap.org/oauth/';
 
 	#################################################################
@@ -23,19 +22,21 @@
 
 		$url = $GLOBALS['cfg']['osm_oauth_endpoint'] . 'request_token/';
 
-		$url = oauth_sign_get($keys, $url, $args, 'GET');
-		$rsp = http_get($url);
+		if (! oauth_get_auth_token($keys, $url)){
 
-		if (! $rsp['ok']){
-			return $rsp;
+			return array(
+				'ok' => 0,
+			);
 		}
-
-		$data = osm_oauth_rsp_to_hash($rsp['body']);
 
 		return array(
 			'ok' => 1,
-			'data' => $data,
+			'data' => array(
+				'oauth_token' => $keys['request_key'],
+				'oauth_secret' => $keys['request_secret'],
+			)
 		);
+
 	}
 
 	#################################################################
@@ -81,51 +82,6 @@
 			'ok' => 1,
 			'data' => $data,
 		);
-	}
-
-	#################################################################
-
-	function osm_oauth_api_call($method, $args, $more=array()){
-
-		$keys = array(
-			'oauth_key' => $GLOBALS['cfg']['osm_oauth_key'],
-			'oauth_secret' => $GLOBALS['cfg']['osm_oauth_secret'],
-		);
-
-		if (isset($more['oauth_token'])){
-			$keys['user_key'] = $more['oauth_token'];
-			$keys['user_secret'] = $more['oauth_secret'];
-		}
-
-		$args['method'] = $method;
-		$args['format'] = 'json';
-		$args['nojsoncallback'] = 1;
-
-		# Just keep things simple and assume we're always doing POSTs
-
-		$url = oauth_sign_get($keys, $GLOBALS['cfg']['osm_api_endpoint'], $args, 'POST');
-		dumper($url);
-
-		list($url, $postdata) = explode('?', $url, 2);
-
-		$rsp = http_post($url, $postdata);
-
-		if (! $rsp['ok']){
-			return $rsp;
-		}
-
-		$json = json_decode($rsp['body'], 'as a hash');
-
-		if (! $json){
-			return array( 'ok' => 0, 'error' => 'failed to parse response' );
-		}
-
-		if ($json['stat'] != 'ok'){
-			return array( 'ok' => 0, 'error' => $json['message']);
-		}
-
-		unset($json['stat']);
-		return array( 'ok' => 1, 'data' => $json );
 	}
 
 	#################################################################

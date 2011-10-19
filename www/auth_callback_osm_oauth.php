@@ -3,6 +3,7 @@
 	include("include/init.php");
 
 	loadlib("osm_users");
+	loadlib("osm_api");
 	loadlib("osm_oauth");
 	loadlib("random");
 
@@ -37,7 +38,7 @@
 
 	if (! $oauth_cookie){
 		$GLOBALS['error']['oauth_missing_cookie'] = 1;
-		$GLOBALS['smarty']->display("page_auth_callback_oauth.txt");
+		$GLOBALS['smarty']->display("page_auth_callback_osm_oauth.txt");
 		exit();
 	}
 
@@ -45,12 +46,13 @@
 	$request = explode(":", $request, 2);
 
 	# Make sure that we've got the minimum set of parameters
-	# we expect Osm to send back.
+	# we expect OSM to send back. OSM does not send back the
+	# verifier parameter...
 
 	$verifier = get_str('oauth_verifier');
 	$token = get_str('oauth_token');
 
-	if ((! $verifier) || (! $token)){
+	if (! $token){
 		$GLOBALS['error']['oauth_missing_args'] = 1;
 		$GLOBALS['smarty']->display("page_auth_callback_osm_oauth.txt");
 		exit();
@@ -68,7 +70,8 @@
 	);
 
 	$args = array(
-		'oauth_verifier' => $verifier,
+		# see above
+		# 'oauth_verifier' => $verifier,
 		'oauth_token' => $token,
 	);
 
@@ -84,13 +87,25 @@
 	# to use the Osm API to validate the user and we've got an OAuth
 	# key/secret pair.
 
-	$data = $rsp['data'];
+	$user_keys = $rsp['data'];
 
-	$osm_id = $data['user_id'];
-	$username = $data['screen_name'];
+	# Now we need to fetch user info to figure who we're dealing with...
+
+	$rsp = osm_api_call('user/details', $user_keys);
+
+	if (! $rsp['ok']){
+		$GLOBALS['error']['user_details'] = 1;
+		$GLOBALS['smarty']->display("page_auth_callback_osm_oauth.txt");
+		exit();
+	}
+
+	$user_data = $rsp['data'];
+
+	$osm_id = $user_data['user']['@attributes']['id'];
+	$username = $user_data['user']['@attributes']['display_name'];
 
 	# The first thing we do is check to see if we already have an account
-	# matching that user's Osm ID.
+	# matching that user's OSM ID.
 
 	$osm_user = osm_users_get_by_osm_id($osm_id);
 
@@ -129,8 +144,8 @@
 		$osm_user = osm_users_create_user(array(
 			'user_id' => $user['id'],
 			'osm_id' => $osm_id,
-			'oauth_token' => $data['oauth_token'],
-			'oauth_secret' => $data['oauth_token_secret'],
+			'oauth_token' => $user_keys['oauth_token'],
+			'oauth_secret' => $user_keys['oauth_token_secret'],
 		));
 
 		if (! $osm_user){

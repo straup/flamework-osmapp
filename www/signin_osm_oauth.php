@@ -17,6 +17,7 @@
 		exit();
 	}
 
+
 	# Because we need to have the request token/secret on both
 	# sides of the auth URL dance we're going to encrypt them
 	# and pass them around as a cookie. Whether or not this is
